@@ -1,0 +1,4 @@
+# Ignore sensitive config and credentials
+config.json
+weather_bot.log
+posted_alerts.json
