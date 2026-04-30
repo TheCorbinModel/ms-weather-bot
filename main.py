@@ -15,7 +15,7 @@ from datetime import datetime
 
 from token_manager import TokenManager
 from nws_alerts import fetch_mississippi_alerts, filter_significant_alerts
-from graphic_generator import create_alert_graphic
+from google_map_alert_graphic import create_google_map_alert_graphic
 from fb_publisher import compose_post, publish_photo_post, publish_text_post
 
 # ----- Configuration -----
@@ -91,9 +91,14 @@ class MississippiWeatherBot:
             f"{alert.get('headline', 'No headline')}"
         )
 
-        # Step 1: Generate the graphic
+
+        # Step 1: Only proceed if alert has a valid polygon (at least 3 points)
+        polygon = alert.get("polygon")
+        if not polygon or not isinstance(polygon, list) or len(polygon) < 3:
+            logger.warning(f"Skipping alert {alert_id}: No valid polygon for map graphic.")
+            return
         try:
-            image_path = create_alert_graphic(alert)
+            image_path = create_google_map_alert_graphic(alert)
             logger.info(f"Graphic generated: {image_path}")
         except Exception as e:
             logger.error(f"Graphic generation failed: {e}")
