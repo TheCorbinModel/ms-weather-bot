@@ -57,6 +57,13 @@ def fetch_mississippi_alerts():
                 "message_type": props.get("messageType", ""),
                 "instruction": props.get("instruction", ""),
             }
+            # Extract polygon from geometry if present
+            geometry = feature.get("geometry")
+            if geometry and geometry.get("type") == "Polygon":
+                # NWS polygons are [ [ [lng, lat], ... ] ]
+                coords = geometry.get("coordinates", [])
+                if coords and isinstance(coords[0], list):
+                    alert["polygon"] = [tuple(pt) for pt in coords[0]]
             alerts.append(alert)
         logger.info(f"Fetched {len(alerts)} active alerts for Mississippi")
         return alerts

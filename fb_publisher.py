@@ -74,6 +74,15 @@ def compose_post(alert):
     areas = alert.get("areas", "Mississippi")
     headline = alert.get("headline", "")
     instruction = alert.get("instruction", "")
+    description = alert.get("description", "")
+
+    # Try to get city/county hashtags from alert_post_formatter if available
+    try:
+        from alert_post_formatter import extract_locations_for_post, build_hashtags
+        cities, counties = extract_locations_for_post(alert, max_locations=4)
+        location_tags = build_hashtags(alert, cities if cities else counties)
+    except Exception:
+        location_tags = ""
 
     lines = []
     lines.append(f"{emoji} {event.upper()} {emoji}")
@@ -105,6 +114,44 @@ def compose_post(alert):
         except ValueError:
             pass
 
+    # Always include WHAT, WHERE, WHEN, IMPACTS (with fallback if missing)
+    import re
+    key_points = {}
+    for key in ["WHAT", "WHERE", "WHEN", "IMPACTS"]:
+        m = re.search(rf"\* {key}(.+?)(\n\*|$)", description or '', re.DOTALL)
+        if m:
+            key_points[key] = m.group(1).strip()
+        else:
+            key_points[key] = None
+
+    # Fallbacks if missing
+    if not key_points["WHAT"]:
+        key_points["WHAT"] = alert.get("headline") or alert.get("event")
+    if not key_points["WHERE"]:
+        key_points["WHERE"] = alert.get("areas") or "Mississippi"
+    if not key_points["WHEN"]:
+        onset = alert.get("onset", "")
+        expires = alert.get("expires", "")
+        if onset and expires:
+            from datetime import datetime
+            try:
+                onset_dt = datetime.fromisoformat(onset.replace("Z", "+00:00"))
+                expires_dt = datetime.fromisoformat(expires.replace("Z", "+00:00"))
+                key_points["WHEN"] = f"{onset_dt.strftime('%b %d, %I:%M %p')} -- {expires_dt.strftime('%b %d, %I:%M %p')}"
+            except Exception:
+                key_points["WHEN"] = "Time not specified"
+        else:
+            key_points["WHEN"] = "Time not specified"
+    if not key_points["IMPACTS"]:
+        key_points["IMPACTS"] = "Impacts not specified."
+
+    # Add the four key points in order
+    lines.append(f"* WHAT: {key_points['WHAT']}")
+    lines.append(f"* WHERE: {key_points['WHERE']}")
+    lines.append(f"* WHEN: {key_points['WHEN']}")
+    lines.append(f"* IMPACTS: {key_points['IMPACTS']}")
+    lines.append("")
+
     if instruction:
         if len(instruction) > 300:
             instruction = instruction[:297] + "..."
@@ -117,11 +164,9 @@ def compose_post(alert):
     )
     lines.append("")
 
-    # Add hashtags
-    hashtags = HASHTAG_MAP.get(
-        event, "#MSSevereWx #Mississippi #Weather"
-    )
-    lines.append(hashtags)
+    # Add only concise hashtags (event, alert type, location, state)
+    if location_tags:
+        lines.append(location_tags)
 
     return "\n".join(lines)
 

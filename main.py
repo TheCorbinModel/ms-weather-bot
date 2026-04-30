@@ -72,12 +72,19 @@ class MississippiWeatherBot:
         )
         self._save_posted_alerts()
 
+
     def process_alert(self, alert):
         """Process a single alert: graphic -> compose -> publish."""
+        from post_cooldown import can_post_alert
         alert_id = alert["id"]
 
         if alert_id in self.posted_alerts:
             return  # Already posted
+
+        # Check cooldown/priority logic
+        if not can_post_alert(alert["event"]):
+            logger.info(f"Cooldown active, skipping post for {alert['event']}")
+            return
 
         logger.info(
             f"New alert: {alert['event']} -- "
