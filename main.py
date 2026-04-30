@@ -187,7 +187,31 @@ class MississippiWeatherBot:
         logger.info("Bot stopped.")
 
 if __name__ == "__main__":
-    if "--single-run" in sys.argv:
+    if "--test-post" in sys.argv:
+        # Test mode: post a test message to Facebook
+        from fb_publisher import publish_text_post
+        from token_manager import TokenManager
+        print("[TEST MODE] Posting test message to Facebook...")
+        token_mgr = TokenManager(CONFIG_PATH)
+        # Debug: Print token and page id info
+        print("[DEBUG] PAGE_ID:", token_mgr.page_id)
+        print("[DEBUG] PAGE_ACCESS_TOKEN (first 10 chars):", str(token_mgr.page_access_token)[:10], "... length:", len(str(token_mgr.page_access_token)))
+        test_message = (
+            "\u26a0\ufe0f TEST ALERT \u26a0\ufe0f\n"
+            "This is a test post from the Mississippi Weather Bot.\n"
+            "If you see this, your bot is able to publish to Facebook!\n\n"
+            "#Test #MSSevereWx #Mississippi"
+        )
+        post_id = publish_text_post(
+            token_mgr.page_id,
+            token_mgr.page_access_token,
+            test_message,
+        )
+        if post_id:
+            print(f"[SUCCESS] Test post published! Post ID: {post_id}")
+        else:
+            print("[ERROR] Test post failed. Check your credentials and permissions.")
+    elif "--single-run" in sys.argv:
         bot = MississippiWeatherBot()
         all_alerts = fetch_mississippi_alerts()
         significant = filter_significant_alerts(all_alerts)
