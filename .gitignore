@@ -2,3 +2,4 @@
 config.json
 weather_bot.log
 posted_alerts.json
+.env

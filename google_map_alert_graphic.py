@@ -177,10 +177,12 @@ def create_google_map_alert_graphic(alert, output_dir="graphics"):
     draw = ImageDraw.Draw(out_img)
     bar_text = f"{event.upper()} - {location.upper()}"
     # Auto-shrink font to fit bar with padding
-    max_font_size = 40
+    # Dynamically size font to fill bar, leaving minimal padding
+    max_font_size = 60
     min_font_size = 18
-    horizontal_padding = 30
+    min_padding = 24  # Minimum space on each side
     font = None
+    text_w, text_h = 0, 0
     for font_size in range(max_font_size, min_font_size - 1, -2):
         try:
             font = ImageFont.truetype("arialbd.ttf", font_size)
@@ -194,9 +196,10 @@ def create_google_map_alert_graphic(alert, output_dir="graphics"):
             text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
         except Exception:
             text_w, text_h = font.getsize(bar_text)
-        if text_w <= MAP_WIDTH - 2 * horizontal_padding:
+        if text_w <= MAP_WIDTH - 2 * min_padding:
             break
-    x = max((MAP_WIDTH - text_w) // 2, horizontal_padding)
+    # Center text, but never let it touch the edge
+    x = max((MAP_WIDTH - text_w) // 2, min_padding)
     y = (bar_height - text_h) // 2
     draw.text((x, y), bar_text, font=font, fill="white")
 
